@@ -36,13 +36,16 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.mockito.internal.matchers.Null;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
+
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.BaseSubscriber;
@@ -665,42 +668,68 @@ public class GuideTests {
 	                .verifyError();
 	}
 
-	//FIXME use RetrySignal in reference documentation
 	@Test
 	public void errorHandlingRetryWhenEquatesRetry() {
+		AtomicInteger errorCount = new AtomicInteger();
 		Flux<String> flux =
-		Flux.<String>error(new IllegalArgumentException())
-				.retryWhen((Function<Flux<Throwable>, Flux<Integer>>) companion -> companion
-						.zipWith(Flux.range(1, 4), (error, index) -> { // <1>
-							if (index < 4) return index; // <2>
-							else throw Exceptions.propagate(error); // <3>
-						})
-				);
+				Flux.<String>error(new IllegalArgumentException())
+						.doOnError(e -> errorCount.incrementAndGet())
+						.retryWhen(() -> companion -> // <1>
+								companion.map(rs -> { // <2>
+									if (rs.totalRetries() < 3) return rs.totalRetries(); // <3>
+									else throw Exceptions.propagate(rs.failure()); // <4>
+								})
+						);
 
 		StepVerifier.create(flux)
 	                .verifyError(IllegalArgumentException.class);
 
-		StepVerifier.create(Flux.<String>error(new IllegalArgumentException()).retry(3))
+		AtomicInteger retryNErrorCount = new AtomicInteger();
+		StepVerifier.create(Flux.<String>error(new IllegalArgumentException()).doOnError(e -> retryNErrorCount.incrementAndGet()).retry(3))
 	                .verifyError();
+
+		assertThat(errorCount).hasValue(retryNErrorCount.get());
 	}
 
-	//FIXME use RetrySignal in reference documentation
+	//FIXME demonstrate transient error source in guide, make this part of the guide
+	@Test
+	public void errorHandlingRetryBuilders() {
+		Throwable exception = new IllegalStateException("boom");
+		Flux<String> errorFlux = Flux.error(exception);
+
+		errorFlux.retryWhen(Retry.max(3))
+		         .as(StepVerifier::create)
+		         .verifyErrorSatisfies(e -> assertThat(e)
+				         .hasMessage("Retries exhausted: 3/3")
+				         .hasCause(exception));
+
+		errorFlux.retryWhen(Retry.max(3).filter(error -> error instanceof NullPointerException))
+		         .as(StepVerifier::create)
+		         .verifyErrorMessage("boom");
+	}
+
 	@Test
 	public void errorHandlingRetryWhenExponential() {
+		AtomicInteger errorCount = new AtomicInteger();
 		Flux<String> flux =
-		Flux.<String>error(new IllegalArgumentException())
-				.retryWhen((Function<Flux<Throwable>, Flux<Long>>)companion -> companion
-						.doOnNext(s -> System.out.println(s + " at " + LocalTime.now())) // <1>
-						.zipWith(Flux.range(1, 4), (error, index) -> { // <2>
-							if (index < 4) return index;
-							else throw Exceptions.propagate(error);
+				Flux.<String>error(new IllegalStateException("boom"))
+						.doOnError(e -> { // <1>
+							errorCount.incrementAndGet();
+							System.out.println(e + " at " + LocalTime.now());
 						})
-						.flatMap(index -> Mono.delay(Duration.ofMillis(index * 100))) // <3>
-						.doOnNext(s -> System.out.println("retried at " + LocalTime.now())) // <4>
-				);
+						.retryWhen(Retry
+								.backoff(3, Duration.ofMillis(100)).jitter(0d) // <2>
+								.doAfterRetry(rs -> System.out.println("retried at " + LocalTime.now())) // <3>
+								.onRetryExhaustedThrow((spec, rs) -> rs.failure()) // <4>
+						);
 
 		StepVerifier.create(flux)
-		            .verifyError(IllegalArgumentException.class);
+		            .verifyErrorSatisfies(e -> Assertions
+				            .assertThat(e)
+				            .isInstanceOf(IllegalStateException.class)
+				            .hasMessage("boom"));
+
+		assertThat(errorCount).hasValue(4);
 	}
 
 	public String convert(int i) throws IOException {
@@ -983,7 +1012,7 @@ public class GuideTests {
 				assertThat(withSuppressed.getSuppressed()).hasSize(1);
 				assertThat(withSuppressed.getSuppressed()[0])
 						.hasMessageStartingWith("\nAssembly trace from producer [reactor.core.publisher.MonoSingle] :")
-						.hasMessageContaining("Flux.single ⇢ at reactor.guide.GuideTests.scatterAndGather(GuideTests.java:947)\n");
+						.hasMessageContaining("Flux.single ⇢ at reactor.guide.GuideTests.scatterAndGather(GuideTests.java:976)\n");
 			});
 		}
 	}

@@ -17,6 +17,7 @@
 package reactor.util.retry;
 
 import java.time.Duration;
+import java.util.function.Supplier;
 
 import org.reactivestreams.Publisher;
 
@@ -48,7 +49,7 @@ public interface Retry {
 	Publisher<?> generateCompanion(Flux<RetrySignal> retrySignalCompanion);
 
 	/**
-	 * State for a {@link Flux#retryWhen(Supplier) Flux retry} or {@link reactor.core.publisher.Mono#retryWhen(Supplier) Mono retry}.
+	 * State for a {@link Flux#retryWhen(Supplier)} Flux retry} or {@link reactor.core.publisher.Mono#retryWhen(Supplier) Mono retry}.
 	 * A flux of states is passed to the user, which gives information about the {@link #failure()} that potentially triggers
 	 * a retry as well as two indexes: the number of errors that happened so far (and were retried) and the same number,
 	 * but only taking into account <strong>subsequent</strong> errors (see {@link #totalRetriesInARow()}).
