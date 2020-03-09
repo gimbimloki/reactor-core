@@ -931,13 +931,13 @@ public abstract class Flux<T> implements Publisher<T> {
 				if (t != null) {
 					return just(t);
 				}
-				return empty();
+				return onAssembly(empty());
 			}
 			catch (Exception e) {
 				return error(e);
 			}
 		}
-		return wrap(source);
+		return onAssembly(wrap(source));
 	}
 
 	/**
@@ -9597,7 +9597,8 @@ public abstract class Flux<T> implements Publisher<T> {
 	}
 
 	/**
-	 * Unchecked wrap of {@link Publisher} as {@link Flux}, supporting {@link Fuseable} sources
+	 * Unchecked wrap of {@link Publisher} as {@link Flux}, supporting {@link Fuseable} sources.
+	 * Note that this bypasses {@link Hooks#onEachOperator(String, Function) assembly hooks}.
 	 *
 	 * @param source the {@link Publisher} to wrap
 	 * @param <I> input upstream type

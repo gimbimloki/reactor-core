@@ -62,8 +62,10 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.Operators;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.core.publisher.Signal;
 import reactor.core.publisher.SignalType;
@@ -1589,6 +1591,48 @@ public class FluxTests extends AbstractReactorTest {
 			println("Succeeded " + successCount + " time" + (successCount <= 1 ? "." : "s."));
 		}
 
+	}
+
+	@Test
+	public void fluxFromCallsAssemblyHook() {
+		Flux<Integer> fluxSource = Flux.range(1, 10);
+		Mono<String> scalarJust = Mono.just("scalarJust");
+		Mono<String> scalarError = Mono.error(new IllegalStateException("scalarError"));
+		Mono<String> scalarEmpty = Mono.empty();
+		Mono<String> monoFuseable = Mono.just("monoFuseable").map(i -> i);
+		Mono<String> monoNormal = Mono.just("monoNormal").hide().map(i -> i);
+		Publisher<String> publisher = sub -> sub.onSubscribe(Operators.emptySubscription());
+
+		AtomicInteger wrappedCount = new AtomicInteger();
+		Hooks.onEachOperator(p -> {
+			wrappedCount.incrementAndGet();
+			return p;
+		});
+		try {
+			Flux.from(fluxSource);
+			Assertions.assertThat(wrappedCount).as("fluxSource not wrapped").hasValue(0);
+
+			Flux.from(scalarJust);
+			Assertions.assertThat(wrappedCount).as("scalarJust wrapped").hasValue(1);
+
+			Flux.from(scalarError);
+			Assertions.assertThat(wrappedCount).as("scalarError wrapped").hasValue(2);
+
+			Flux.from(scalarEmpty);
+			Assertions.assertThat(wrappedCount).as("scalarEmpty wrapped").hasValue(3);
+
+			Flux.from(monoFuseable);
+			Assertions.assertThat(wrappedCount).as("monoFuseable wrapped").hasValue(4);
+
+			Flux.from(monoNormal);
+			Assertions.assertThat(wrappedCount).as("monoNormal wrapped").hasValue(5);
+
+			Flux.from(publisher);
+			Assertions.assertThat(wrappedCount).as("publisher wrapped").hasValue(6);
+		}
+		finally {
+			Hooks.resetOnEachOperator();
+		}
 	}
 
 	private static final long TIMEOUT = 10_000;

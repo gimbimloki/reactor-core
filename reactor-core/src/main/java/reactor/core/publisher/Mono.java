@@ -2625,24 +2625,11 @@ public abstract class Mono<T> implements Publisher<T> {
 	 * @return a {@link Flux} variant of this {@link Mono}
 	 */
     public final Flux<T> flux() {
-	    if (this instanceof Callable) {
-	        if (this instanceof Fuseable.ScalarCallable) {
-		        T v;
-		        try {
-			        v = block();
-		        }
-		        catch (Throwable t) {
-			        return Flux.error(t);
-		        }
-	            if (v == null) {
-	                return Flux.empty();
-	            }
-	            return Flux.just(v);
-	        }
+	    if (this instanceof Callable && !(this instanceof Fuseable.ScalarCallable)) {
 		    @SuppressWarnings("unchecked") Callable<T> thiz = (Callable<T>) this;
 		    return Flux.onAssembly(new FluxCallable<>(thiz));
 	    }
-		return Flux.wrap(this);
+		return Flux.from(this);
 	}
 
 	/**

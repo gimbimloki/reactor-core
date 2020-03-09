@@ -29,9 +29,13 @@ import java.util.function.Supplier;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
+
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.Operators;
 import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
@@ -303,5 +307,61 @@ public class MonoTests {
 		String cacheHit3 = cached.block();
 		Assertions.assertThat(cacheHit3).as("cacheHit3").isEqualTo("GOOD1");
 		Assertions.assertThat(contextFillCount).as("cacheHit3").hasValue(4);
+	}
+
+	@Test
+	public void fluxToMonoToFluxCallsAssemblyHooks() {
+		AtomicInteger wrappedCount = new AtomicInteger();
+		Hooks.onEachOperator(p -> {
+			wrappedCount.incrementAndGet();
+			return p;
+		});
+		try {
+			Flux<Integer> fluxSource = Flux.range(1, 10);
+			Assertions.assertThat(wrappedCount).as("range wrapped").hasValue(1);
+
+			final Mono<Integer> monoFrom = Mono.from(fluxSource);
+			Assertions.assertThat(wrappedCount).as("Mono#from wrapped").hasValue(2);
+
+			final Flux<Integer> fluxReconverted = monoFrom.flux();
+			Assertions.assertThat(wrappedCount).as("Mono.from().flux() wrapped").hasValue(3);
+		}
+		finally {
+			Hooks.resetOnEachOperator();
+		}
+	}
+
+	@Test
+	public void monoFluxCallsAssemblyHook() {
+		Mono<String> scalarJust = Mono.just("scalarJust");
+		Mono<String> scalarError = Mono.error(new IllegalStateException("scalarError"));
+		Mono<String> scalarEmpty = Mono.empty();
+		Mono<String> monoCallable = Mono.fromCallable(() -> "fromCallable");
+		Mono<String> monoNormal = Mono.just("monoNormal").hide().map(i -> i);
+
+		AtomicInteger wrappedCount = new AtomicInteger();
+		Hooks.onEachOperator(p -> {
+			wrappedCount.incrementAndGet();
+			return p;
+		});
+		try {
+			scalarJust.flux();
+			Assertions.assertThat(wrappedCount).as("scalarJust wrapped").hasValue(1);
+
+			scalarError.flux();
+			Assertions.assertThat(wrappedCount).as("scalarError wrapped").hasValue(2);
+
+			scalarEmpty.flux();
+			Assertions.assertThat(wrappedCount).as("scalarEmpty wrapped").hasValue(3);
+
+			monoCallable.flux();
+			Assertions.assertThat(wrappedCount).as("monoCallable wrapped").hasValue(4);
+
+			monoNormal.flux();
+			Assertions.assertThat(wrappedCount).as("monoNormal wrapped").hasValue(5);
+		}
+		finally {
+			Hooks.resetOnEachOperator();
+		}
 	}
 }
