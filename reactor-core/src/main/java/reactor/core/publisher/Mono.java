@@ -3653,7 +3653,9 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * @param retryMatcher the predicate to evaluate if retry should occur based on a given error signal
 	 *
 	 * @return a {@link Mono} that retries on onError if the predicates matches.
+	 * @deprecated use {@link #retryWhen(Supplier)} instead, to be removed in 3.4
 	 */
+	@Deprecated
 	public final Mono<T> retry(Predicate<? super Throwable> retryMatcher) {
 		return onAssembly(new MonoRetryPredicate<>(this, retryMatcher));
 	}
@@ -3670,8 +3672,9 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 *
 	 * @return a {@link Mono} that retries on onError up to the specified number of retry
 	 * attempts, only if the predicate matches.
-	 *
+	 * @deprecated use {@link #retryWhen(Supplier)} instead, to be removed in 3.4
 	 */
+	@Deprecated
 	public final Mono<T> retry(long numRetries, Predicate<? super Throwable> retryMatcher) {
 		return defer(() -> retry(Flux.countingPredicate(retryMatcher, numRetries)));
 	}
@@ -3695,7 +3698,7 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 *
 	 * @return a {@link Mono} that retries on onError when the companion {@link Publisher} produces an
 	 * onNext signal
-	 * @deprecated use {@link #retryWhen(Retry)} instead, to be removed in 3.4
+	 * @deprecated use {@link #retryWhen(Supplier)} instead, to be removed in 3.4
 	 */
 	@Deprecated
 	public final Mono<T> retryWhen(Function<Flux<Throwable>, ? extends Publisher<?>> whenFactory) {
@@ -3716,15 +3719,35 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * {@link org.reactivestreams.Subscriber#onNext(Object) onNext}. If processed with a delay,
 	 * this could lead to the represented state being out of sync with the state at which the retry
 	 * was evaluated. Map it to {@link Retry.RetrySignal#copy()} right away to mediate this.
+	 * <p>
+	 * Note that if the companion {@link Publisher} created by the {@code whenFactory}
+	 * emits {@link Context} as trigger objects, these {@link Context} will be merged with
+	 * the previous Context:
+	 * <pre><code>
+	 * .retryWhen(errorCurrentAttempt -> errorCurrentAttempt.handle((retrySignal, sink) -> {
+	 * 	    Context ctx = sink.currentContext();
+	 * 	    int rl = ctx.getOrDefault("retriesLeft", 0);
+	 * 	    if (rl > 0) {
+	 *		    sink.next(Context.of(
+	 *		        "retriesLeft", rl - 1,
+	 *		        "lastError", retrySignal.failure()
+	 *		    ));
+	 * 	    } else {
+	 * 	        sink.error(new IllegalStateException("retries exhausted", retrySignal.failure()));
+	 * 	    }
+	 * }))
+	 * </code></pre>
 	 *
-	 * @param strategy a {@link Retry} strategy to configure retries, typically generated via one of the builders on the class
-	 * @return a {@link Flux} that retries on onError
+	 * @param retrySpecSupplier the {@link Supplier} of the {@link Retry} strategy that will generate the companion {@link Publisher},
+	 * given a {@link Flux} that signals each onError as a {@link reactor.util.retry.Retry.RetrySignal}.
+	 *
+	 * @return a {@link Flux} that retries on onError when a companion {@link Publisher} produces an onNext signal
 	 * @see Retry#max(long)
 	 * @see Retry#maxInARow(long)
 	 * @see Retry#backoff(long, Duration)
 	 */
-	public final Mono<T> retryWhen(Retry strategy) {
-		return onAssembly(new MonoRetryWhen<>(this, strategy));
+	public final Mono<T> retryWhen(Supplier<Retry> retrySpecSupplier) {
+		return onAssembly(new MonoRetryWhen<>(this, retrySpecSupplier.get()));
 	}
 
 	/**
@@ -3756,7 +3779,7 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * @param firstBackoff the first backoff delay to apply then grow exponentially. Also
 	 * minimum delay even taking jitter into account.
 	 * @return a {@link Mono} that retries on onError with exponentially growing randomized delays between retries.
-	 * @deprecated use {@link #retryWhen(Retry)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
+	 * @deprecated use {@link #retryWhen(Supplier)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
 	 */
 	@Deprecated
 	public final Mono<T> retryBackoff(long numRetries, Duration firstBackoff) {
@@ -3794,7 +3817,7 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * minimum delay even taking jitter into account.
 	 * @param maxBackoff the maximum delay to apply despite exponential growth and jitter.
 	 * @return a {@link Mono} that retries on onError with exponentially growing randomized delays between retries.
-	 * @deprecated use {@link #retryWhen(Retry)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
+	 * @deprecated use {@link #retryWhen(Supplier)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
 	 */
 	@Deprecated
 	public final Mono<T> retryBackoff(long numRetries, Duration firstBackoff, Duration maxBackoff) {
@@ -3834,7 +3857,7 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * @param maxBackoff the maximum delay to apply despite exponential growth and jitter.
 	 * @param backoffScheduler the {@link Scheduler} on which the delays and subsequent attempts are executed.
 	 * @return a {@link Mono} that retries on onError with exponentially growing randomized delays between retries.
-	 * @deprecated use {@link #retryWhen(Retry)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
+	 * @deprecated use {@link #retryWhen(Supplier)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
 	 */
 	@Deprecated
 	public final Mono<T> retryBackoff(long numRetries, Duration firstBackoff, Duration maxBackoff, Scheduler backoffScheduler) {
@@ -3874,7 +3897,7 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * @param maxBackoff the maximum delay to apply despite exponential growth and jitter.
 	 * @param jitterFactor the jitter percentage (as a double between 0.0 and 1.0).
 	 * @return a {@link Mono} that retries on onError with exponentially growing randomized delays between retries.
-	 * @deprecated use {@link #retryWhen(Retry)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
+	 * @deprecated use {@link #retryWhen(Supplier)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
 	 */
 	@Deprecated
 	public final Mono<T> retryBackoff(long numRetries, Duration firstBackoff, Duration maxBackoff, double jitterFactor) {
@@ -3917,7 +3940,7 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * @param backoffScheduler the {@link Scheduler} on which the delays and subsequent attempts are executed.
 	 * @param jitterFactor the jitter percentage (as a double between 0.0 and 1.0).
 	 * @return a {@link Mono} that retries on onError with exponentially growing randomized delays between retries.
-	 * @deprecated use {@link #retryWhen(Retry)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
+	 * @deprecated use {@link #retryWhen(Supplier)} with a {@link Retry#backoff(long, Duration)} base, to be removed in 3.4
 	 */
 	@Deprecated
 	public final Mono<T> retryBackoff(long numRetries, Duration firstBackoff, Duration maxBackoff, double jitterFactor, Scheduler backoffScheduler) {

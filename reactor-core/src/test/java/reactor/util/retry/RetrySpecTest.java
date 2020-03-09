@@ -251,7 +251,7 @@ public class RetrySpecTest {
 		AtomicInteger beforeHookTracker = new AtomicInteger();
 		AtomicInteger afterHookTracker = new AtomicInteger();
 
-		Retry retryBuilder = Retry
+		RetrySpec retryBuilder = Retry
 				.max(1)
 				.doBeforeRetry(s -> order.add("SyncBefore A: " + s))
 				.doBeforeRetry(s -> order.add("SyncBefore B, tracking " + beforeHookTracker.incrementAndGet()))
@@ -294,7 +294,7 @@ public class RetrySpecTest {
 		AtomicInteger beforeHookTracker = new AtomicInteger();
 		AtomicInteger afterHookTracker = new AtomicInteger();
 
-		Retry retryBuilder = Retry
+		RetrySpec retryBuilder = Retry
 				.maxInARow(2)
 				.doBeforeRetry(s -> order.add("SyncBefore A: " + s))
 				.doBeforeRetry(s -> order.add("SyncBefore B, tracking " + beforeHookTracker.incrementAndGet()))
@@ -375,4 +375,24 @@ public class RetrySpecTest {
 		);
 	}
 
+	@Test
+	public void smokeTestLambdaAmbiguity() {
+		//the following should just compile
+
+		Flux.range(1, 10)
+		    .retryWhen(companion -> companion.take(3))
+		    .blockLast();
+
+		Flux.range(1, 10)
+		    .retryWhen(Retry.max(1))
+		    .blockLast();
+
+		Mono.just(1)
+		    .retryWhen(companion -> companion.take(3))
+		    .block();
+
+		Mono.just(1)
+		    .retryWhen(Retry.max(1))
+		    .block();
+	}
 }

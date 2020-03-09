@@ -656,7 +656,7 @@ public class GuideTests {
 		Flux<String> flux =
 		Flux.<String>error(new IllegalArgumentException()) // <1>
 				.doOnError(System.out::println) // <2>
-				.retryWhen((Retry) companion -> companion.take(3)); // <3>
+				.retryWhen(() -> companion -> companion.take(3)); // <3>
 
 		StepVerifier.create(flux)
 	                .verifyComplete();

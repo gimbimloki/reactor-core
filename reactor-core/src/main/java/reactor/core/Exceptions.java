@@ -697,7 +697,7 @@ public abstract class Exceptions {
 	}
 
 	/**
-	 * A specialized {@link IllegalStateException} to signify a {@link Flux#retryWhen(Retry) retry}
+	 * A specialized {@link IllegalStateException} to signify a {@link Flux#retryWhen(Supplier) retry}
 	 * has failed (eg. after N attempts, or a timeout).
 	 *
 	 * @see #retryExhausted(long, Throwable)

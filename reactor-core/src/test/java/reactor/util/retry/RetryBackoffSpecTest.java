@@ -259,7 +259,7 @@ public class RetryBackoffSpecTest {
 		AtomicInteger beforeHookTracker = new AtomicInteger();
 		AtomicInteger afterHookTracker = new AtomicInteger();
 
-		Retry retryBuilder = Retry
+		RetryBackoffSpec retryBuilder = Retry
 				.backoff(1, Duration.ZERO)
 				.doBeforeRetry(s -> order.add("SyncBefore A: " + s))
 				.doBeforeRetry(s -> order.add("SyncBefore B, tracking " + beforeHookTracker.incrementAndGet()))
@@ -302,7 +302,7 @@ public class RetryBackoffSpecTest {
 		AtomicInteger beforeHookTracker = new AtomicInteger();
 		AtomicInteger afterHookTracker = new AtomicInteger();
 
-		Retry retryBuilder = Retry
+		RetryBackoffSpec retryBuilder = Retry
 				.backoff(2, Duration.ZERO)
 				.maxBackoff(Duration.ZERO)
 				.transientErrors(true)

@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -55,7 +56,7 @@ import reactor.core.scheduler.Schedulers;
  *
  * @author Simon Baslé
  */
-public final class RetryBackoffSpec implements Retry {
+public final class RetryBackoffSpec implements Retry, Supplier<Retry> {
 
 	static final BiFunction<RetryBackoffSpec, RetrySignal, Throwable> BACKOFF_EXCEPTION_GENERATOR = (builder, rs) ->
 			Exceptions.retryExhausted("Retries exhausted: " + rs.totalRetries() + "/" + builder.maxAttempts +
@@ -558,4 +559,8 @@ public final class RetryBackoffSpec implements Retry {
 		});
 	}
 
+	@Override
+	public Retry get() {
+		return this;
+	}
 }

@@ -22,6 +22,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -46,7 +47,7 @@ import reactor.core.publisher.Mono;
  *
  * @author Simon Baslé
  */
-public final class RetrySpec implements Retry {
+public final class RetrySpec implements Retry, Supplier<Retry> {
 
 	static final Duration                                        MAX_BACKOFF                 = Duration.ofMillis(Long.MAX_VALUE);
 	static final Consumer<RetrySignal>                           NO_OP_CONSUMER              = rs -> {};
@@ -371,5 +372,10 @@ public final class RetrySpec implements Retry {
 		Mono<Void> postRetryMono = asyncPostRetry != NO_OP_BIFUNCTION ? asyncPostRetry.apply(copyOfSignal, postRetrySyncMono) : postRetrySyncMono;
 
 		return preRetryMono.then(originalCompanion).flatMap(postRetryMono::thenReturn);
+	}
+
+	@Override
+	public Retry get() {
+		return this;
 	}
 }
