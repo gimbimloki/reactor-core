@@ -764,7 +764,7 @@ assertThat(errorCount).hasValue(6); // <6>
 		transientFlux.retryWhen(Retry.max(2))
 		             .as(StepVerifier::create)
 		             .expectNext(0, 3)
-		             .verifyErrorMessage("Retries exhausted: 2/2 (0 in a row)");
+		             .verifyErrorMessage("Retries exhausted: 2/2");
 
 	}
 

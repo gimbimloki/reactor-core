@@ -90,7 +90,7 @@ public class RetryBackoffSpecTest {
 		            .expectNext(1, 3)
 		            .verifyErrorSatisfies(t -> assertThat(t)
 				            .isInstanceOf(IllegalStateException.class)
-				            .hasMessage("Retries exhausted: 2/2 (0 in a row)")
+				            .hasMessage("Retries exhausted: 2/2")
 				            .hasCause(new IllegalStateException("boom 4")));
 
 		StepVerifier.create(modifiedTemplate2, StepVerifierOptions.create().scenarioName("modified template 2"))
@@ -201,13 +201,13 @@ public class RetryBackoffSpecTest {
 
 	@Test
 	public void retryExceptionDefaultsToRetryExhausted() {
-		RetryBackoffSpec retryBuilder = Retry.backoff(50, Duration.ZERO);
+		RetryBackoffSpec retryBuilder = Retry.backoff(50, Duration.ZERO).transientErrors(true);
 
-		final ImmutableRetrySignal trigger = new ImmutableRetrySignal(100, 21, new IllegalStateException("boom"));
+		final ImmutableRetrySignal trigger = new ImmutableRetrySignal(100, 50, new IllegalStateException("boom"));
 
 		StepVerifier.create(retryBuilder.generateCompanion(Flux.just(trigger)))
 		            .expectErrorSatisfies(e -> assertThat(e).matches(Exceptions::isRetryExhausted, "isRetryExhausted")
-		                                                    .hasMessage("Retries exhausted: 100/50 (21 in a row)")
+		                                                    .hasMessage("Retries exhausted: 50/50 in a row (100 total)")
 		                                                    .hasCause(new IllegalStateException("boom")))
 		            .verify();
 	}
@@ -228,14 +228,16 @@ public class RetryBackoffSpecTest {
 
 	@Test
 	public void defaultRetryExhaustedMessageWithNoTransientErrors() {
-		assertThat(RetryBackoffSpec.BACKOFF_EXCEPTION_GENERATOR.apply(Retry.backoff(123, Duration.ZERO), new ImmutableRetrySignal(123, 123, null)))
+		assertThat(RetryBackoffSpec.BACKOFF_EXCEPTION_GENERATOR.apply(Retry.backoff(123, Duration.ZERO),
+				new ImmutableRetrySignal(123, 123, null)))
 				.hasMessage("Retries exhausted: 123/123");
 	}
 
 	@Test
 	public void defaultRetryExhaustedMessageWithTransientErrors() {
-		assertThat(RetryBackoffSpec.BACKOFF_EXCEPTION_GENERATOR.apply(Retry.backoff(123, Duration.ZERO), new ImmutableRetrySignal(123, 12, null)))
-				.hasMessage("Retries exhausted: 123/123 (12 in a row)");
+		assertThat(RetryBackoffSpec.BACKOFF_EXCEPTION_GENERATOR.apply(Retry.backoff(12, Duration.ZERO).transientErrors(true),
+				new ImmutableRetrySignal(123, 12, null)))
+				.hasMessage("Retries exhausted: 12/12 in a row (123 total)");
 	}
 
 	@Test

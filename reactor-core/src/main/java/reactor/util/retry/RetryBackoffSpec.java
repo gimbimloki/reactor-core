@@ -59,10 +59,10 @@ import reactor.core.scheduler.Schedulers;
 public final class RetryBackoffSpec implements Retry, Supplier<Retry> {
 
 	static final BiFunction<RetryBackoffSpec, RetrySignal, Throwable> BACKOFF_EXCEPTION_GENERATOR = (builder, rs) ->
-			Exceptions.retryExhausted("Retries exhausted: " + rs.totalRetries() + "/" + builder.maxAttempts +
-					(rs.totalRetriesInARow() != rs.totalRetries()
-							? " (" + rs.totalRetriesInARow() + " in a row)"
-							: ""
+			Exceptions.retryExhausted("Retries exhausted: " + (
+					builder.isTransientErrors
+					? rs.totalRetriesInARow() + "/" + builder.maxAttempts + " in a row (" + rs.totalRetries() + " total)"
+					: rs.totalRetries() + "/" + builder.maxAttempts
 					), rs.failure());
 
 	/**

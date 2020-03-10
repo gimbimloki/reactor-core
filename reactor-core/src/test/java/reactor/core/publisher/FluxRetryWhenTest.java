@@ -457,7 +457,7 @@ public class FluxRetryWhenTest {
 		            .expectNext(0, 1) //normal output
 		            .expectNext(0, 1, 0, 1, 0, 1, 0, 1) //4 retry attempts
 		            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-		                                                    .hasMessage("Retries exhausted: 4/4 (0 in a row)")
+		                                                    .hasMessage("Retries exhausted: 4/4")
 		                                                    .hasCause(exception))
 		            .verify(Duration.ofSeconds(1)); //vts test shouldn't even take that long
 
@@ -493,7 +493,7 @@ public class FluxRetryWhenTest {
 		            .expectNext(0, 1) //normal output
 		            .expectNext(0, 1, 0, 1, 0, 1, 0, 1) //4 retry attempts
 		            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-		                                                    .hasMessage("Retries exhausted: 4/4 (0 in a row)")
+		                                                    .hasMessage("Retries exhausted: 4/4")
 		                                                    .hasCause(exception))
 		            .verify(Duration.ofSeconds(1)); //vts test shouldn't even take that long
 
@@ -526,7 +526,7 @@ public class FluxRetryWhenTest {
 		            .expectNext(0, 1) //normal output
 		            .expectNext(0, 1, 0, 1, 0, 1, 0, 1) //4 retry attempts
 		            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-		                                                    .hasMessage("Retries exhausted: 4/4 (0 in a row)")
+		                                                    .hasMessage("Retries exhausted: 4/4")
 		                                                    .hasCause(exception))
 		            .verify(Duration.ofSeconds(1)); //vts test shouldn't even take that long
 
@@ -563,7 +563,7 @@ public class FluxRetryWhenTest {
 		            .expectNext(0, 1) //normal output
 		            .expectNext(0, 1, 0, 1, 0, 1, 0, 1) //4 retry attempts
 		            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-		                                                    .hasMessage("Retries exhausted: 4/4 (0 in a row)")
+		                                                    .hasMessage("Retries exhausted: 4/4")
 		                                                    .hasCause(exception))
 		            .verify(Duration.ofSeconds(1)); //vts test shouldn't even take that long
 
@@ -611,7 +611,7 @@ public class FluxRetryWhenTest {
 			            .expectNext(0, 1) //normal output
 			            .expectNext(0, 1) //1 retry attempts
 			            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-			                                                    .hasMessage("Retries exhausted: 1/1 (0 in a row)")
+			                                                    .hasMessage("Retries exhausted: 1/1")
 			                                                    .hasCause(exception))
 			            .verify(Duration.ofSeconds(1)); //vts test shouldn't even take that long
 
@@ -646,7 +646,7 @@ public class FluxRetryWhenTest {
 		            .expectNext(0, 1) //normal output
 		            .expectNext(0, 1, 0, 1, 0, 1, 0, 1) //4 retry attempts
 		            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-		                                                    .hasMessage("Retries exhausted: 4/4 (0 in a row)")
+		                                                    .hasMessage("Retries exhausted: 4/4")
 		                                                    .hasCause(exception))
 		            .verify(Duration.ofSeconds(1)); //vts test shouldn't even take that long
 
@@ -697,7 +697,7 @@ public class FluxRetryWhenTest {
 		            .then(() -> backoffScheduler.advanceTimeBy(Duration.ofHours(4)))
 		            .expectNext(0, 1, 0, 1, 0, 1, 0, 1) //4 retry attempts
 		            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-		                                                    .hasMessage("Retries exhausted: 4/4 (0 in a row)")
+		                                                    .hasMessage("Retries exhausted: 4/4")
 		                                                    .hasCause(exception))
 		            .verify(Duration.ofMillis(100)); //test should only take roughly the expectNoEvent time
 	}
@@ -722,7 +722,7 @@ public class FluxRetryWhenTest {
 			)
 			            .expectNext(0, 1, 0, 1, 0, 1)
 			            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
-			                                                    .hasMessage("Retries exhausted: 2/2 (0 in a row)")
+			                                                    .hasMessage("Retries exhausted: 2/2")
 			                                                    .hasCause(exception))
 			            .verify(Duration.ofMillis(200));
 
@@ -748,7 +748,7 @@ public class FluxRetryWhenTest {
 		new FluxRetryWhen<>(source, retryFunction)
 				.as(StepVerifier::create)
 				.expectNext(3, 4)
-				.expectErrorMessage("Retries exhausted: 2/2 (0 in a row)")
+				.expectErrorMessage("Retries exhausted: 2/2")
 				.verify(Duration.ofSeconds(2));
 	}
 

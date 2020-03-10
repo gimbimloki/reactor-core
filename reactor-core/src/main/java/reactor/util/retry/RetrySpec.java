@@ -56,11 +56,11 @@ public final class RetrySpec implements Retry, Supplier<Retry> {
 
 	static final BiFunction<RetrySpec, RetrySignal, Throwable>
 			RETRY_EXCEPTION_GENERATOR = (builder, rs) ->
-			Exceptions.retryExhausted("Retries exhausted: " + rs.totalRetries() + "/" + builder.maxAttempts +
-					(rs.totalRetriesInARow() != rs.totalRetries()
-							? " (" + rs.totalRetriesInARow() + " in a row)"
-							: ""
-					), rs.failure());
+			Exceptions.retryExhausted("Retries exhausted: " + (
+					builder.isTransientErrors
+							? rs.totalRetriesInARow() + "/" + builder.maxAttempts + " in a row (" + rs.totalRetries() + " total)"
+							: rs.totalRetries() + "/" + builder.maxAttempts
+			), rs.failure());
 
 	/**
 	 * The configured maximum for retry attempts.

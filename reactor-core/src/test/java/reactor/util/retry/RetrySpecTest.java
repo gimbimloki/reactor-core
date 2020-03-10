@@ -80,7 +80,7 @@ public class RetrySpecTest {
 		            .expectNext(1, 3)
 		            .verifyErrorSatisfies(t -> assertThat(t)
 				            .isInstanceOf(IllegalStateException.class)
-				            .hasMessage("Retries exhausted: 2/2 (0 in a row)")
+				            .hasMessage("Retries exhausted: 2/2")
 				            .hasCause(new IllegalStateException("boom 4")));
 
 		StepVerifier.create(modifiedTemplate2, StepVerifierOptions.create().scenarioName("modified template 2"))
@@ -192,13 +192,13 @@ public class RetrySpecTest {
 
 	@Test
 	public void retryExceptionDefaultsToRetryExhausted() {
-		RetrySpec retrySpec = Retry.max(50);
+		RetrySpec retrySpec = Retry.max(50).transientErrors(true);
 
-		final ImmutableRetrySignal trigger = new ImmutableRetrySignal(100, 21, new IllegalStateException("boom"));
+		final ImmutableRetrySignal trigger = new ImmutableRetrySignal(100, 50, new IllegalStateException("boom"));
 
 		StepVerifier.create(retrySpec.generateCompanion(Flux.just(trigger)))
 		            .expectErrorSatisfies(e -> assertThat(e).matches(Exceptions::isRetryExhausted, "isRetryExhausted")
-		                                                    .hasMessage("Retries exhausted: 100/50 (21 in a row)")
+		                                                    .hasMessage("Retries exhausted: 50/50 in a row (100 total)")
 		                                                    .hasCause(new IllegalStateException("boom")))
 		            .verify();
 	}
@@ -226,8 +226,9 @@ public class RetrySpecTest {
 
 	@Test
 	public void defaultRetryExhaustedMessageWithTransientErrors() {
-		assertThat(RetrySpec.RETRY_EXCEPTION_GENERATOR.apply(Retry.max(123), new ImmutableRetrySignal(123, 12, null)))
-				.hasMessage("Retries exhausted: 123/123 (12 in a row)");
+		assertThat(RetrySpec.RETRY_EXCEPTION_GENERATOR.apply(Retry.max(12).transientErrors(true),
+				new ImmutableRetrySignal(123, 12, null)))
+				.hasMessage("Retries exhausted: 12/12 in a row (123 total)");
 	}
 
 	@Test
