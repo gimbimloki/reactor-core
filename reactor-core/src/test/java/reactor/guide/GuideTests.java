@@ -691,7 +691,6 @@ public class GuideTests {
 		assertThat(errorCount).hasValue(retryNErrorCount.get());
 	}
 
-	//FIXME demonstrate transient error source in guide, make this part of the guide
 	@Test
 	public void errorHandlingRetryBuilders() {
 		Throwable exception = new IllegalStateException("boom");
@@ -730,6 +729,43 @@ public class GuideTests {
 				            .hasMessage("boom"));
 
 		assertThat(errorCount).hasValue(4);
+	}
+
+	@Test
+	public void errorHandlingRetryWhenTransient() {
+		AtomicInteger errorCount = new AtomicInteger(); // <1>
+		AtomicInteger transientHelper = new AtomicInteger();
+		Flux<Integer> transientFlux = Flux.<Integer>generate(sink -> {
+			int i = transientHelper.getAndIncrement();
+			if (i == 10) { // <2>
+				sink.next(i);
+				sink.complete();
+			}
+			else if (i % 3 == 0) { // <3>
+				sink.next(i);
+			}
+			else {
+				sink.error(new IllegalStateException("Transient error at " + i)); // <4>
+			}
+		})
+				.doOnError(e -> errorCount.incrementAndGet());
+
+transientFlux.retryWhen(Retry.max(2).transientErrors(true))  // <5>
+             .blockLast();
+assertThat(errorCount).hasValue(6); // <6>
+
+		transientHelper.set(0);
+		transientFlux.retryWhen(Retry.max(2).transientErrors(true))
+		             .as(StepVerifier::create)
+		             .expectNext(0, 3, 6, 9, 10)
+		             .verifyComplete();
+
+		transientHelper.set(0);
+		transientFlux.retryWhen(Retry.max(2))
+		             .as(StepVerifier::create)
+		             .expectNext(0, 3)
+		             .verifyErrorMessage("Retries exhausted: 2/2 (0 in a row)");
+
 	}
 
 	public String convert(int i) throws IOException {
@@ -1012,7 +1048,7 @@ public class GuideTests {
 				assertThat(withSuppressed.getSuppressed()).hasSize(1);
 				assertThat(withSuppressed.getSuppressed()[0])
 						.hasMessageStartingWith("\nAssembly trace from producer [reactor.core.publisher.MonoSingle] :")
-						.hasMessageContaining("Flux.single ⇢ at reactor.guide.GuideTests.scatterAndGather(GuideTests.java:976)\n");
+						.hasMessageContaining("Flux.single ⇢ at reactor.guide.GuideTests.scatterAndGather(GuideTests.java:1012)\n");
 			});
 		}
 	}

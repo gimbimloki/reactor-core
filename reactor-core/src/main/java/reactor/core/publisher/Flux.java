@@ -7261,7 +7261,7 @@ public abstract class Flux<T> implements CorePublisher<T> {
 	 * Terminal signals in the companion terminate the sequence with the same signal, so emitting an {@link Subscriber#onError(Throwable)}
 	 * will fail the resulting {@link Flux} with that same error.
 	 * <p>
-	 * <img class="marble" src="doc-files/marbles/retryWhenForFlux.svg" alt="">
+	 * <img class="marble" src="doc-files/marbles/retryWhenSpecForFlux.svg" alt="">
 	 * <p>
 	 * Note that the {@link Retry.RetrySignal} state can be transient and change between each source
 	 * {@link org.reactivestreams.Subscriber#onError(Throwable) onError} or
