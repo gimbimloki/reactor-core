@@ -28,7 +28,7 @@ import static reactor.util.retry.RetrySpec.*;
 
 /**
  * Functional interface to configure retries depending on a companion {@link Flux} of {@link RetrySignal},
- * as well as builders for such {@link Flux#retryWhen(Supplier)} retries} companions.
+ * as well as builders for such {@link Flux#retryWhen(Retry)} retries} companions.
  *
  * @author Simon Baslé
  */
@@ -49,7 +49,7 @@ public interface Retry {
 	Publisher<?> generateCompanion(Flux<RetrySignal> retrySignalCompanion);
 
 	/**
-	 * State for a {@link Flux#retryWhen(Supplier)} Flux retry} or {@link reactor.core.publisher.Mono#retryWhen(Supplier) Mono retry}.
+	 * State for a {@link Flux#retryWhen(Retry)} Flux retry} or {@link reactor.core.publisher.Mono#retryWhen(Retry) Mono retry}.
 	 * A flux of states is passed to the user, which gives information about the {@link #failure()} that potentially triggers
 	 * a retry as well as two indexes: the number of errors that happened so far (and were retried) and the same number,
 	 * but only taking into account <strong>subsequent</strong> errors (see {@link #totalRetriesInARow()}).

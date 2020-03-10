@@ -20,9 +20,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -376,20 +378,23 @@ public class RetrySpecTest {
 		);
 	}
 
+	@SuppressWarnings("deprecation")
 	@Test
 	public void smokeTestLambdaAmbiguity() {
 		//the following should just compile
 
+		Function<Flux<Throwable>, Publisher<?>> functionBased = companion -> companion.take(3);
+
 		Flux.range(1, 10)
-		    .retryWhen(companion -> companion.take(3))
+		    .retryWhen(functionBased)
 		    .blockLast();
 
 		Flux.range(1, 10)
-		    .retryWhen(Retry.max(1))
+		    .retryWhen(Retry.max(1).get())
 		    .blockLast();
 
 		Mono.just(1)
-		    .retryWhen(companion -> companion.take(3))
+		    .retryWhen(functionBased)
 		    .block();
 
 		Mono.just(1)

@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
@@ -35,6 +34,7 @@ import org.junit.Test;
 import org.reactivestreams.Subscription;
 
 import reactor.core.CoreSubscriber;
+import reactor.core.Exceptions;
 import reactor.core.Scannable;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -46,7 +46,7 @@ import reactor.util.function.Tuple2;
 import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class FluxRetryWhenTest {
 
@@ -61,6 +61,7 @@ public class FluxRetryWhenTest {
 		new FluxRetryWhen<>(null, v -> v);
 	}
 
+	@SuppressWarnings("deprecation")
 	@Test(expected = NullPointerException.class)
 	public void whenThrowableFactoryNull() {
 		Flux.never()
@@ -70,7 +71,7 @@ public class FluxRetryWhenTest {
 	@Test(expected = NullPointerException.class)
 	public void whenRetrySignalFactoryNull() {
 		Flux.never()
-		    .retryWhen((Supplier<Retry>) null);
+		    .retryWhen((Retry) null);
 	}
 
 	@Test
@@ -79,7 +80,7 @@ public class FluxRetryWhenTest {
 		Flux<Integer> when = Flux.range(1, 10)
 		                         .doOnCancel(() -> cancelled.set(true));
 
-		StepVerifier.create(justError.retryWhen(() -> other -> when))
+		StepVerifier.create(justError.retryWhen((Retry) other -> when))
 		            .thenCancel()
 		            .verify();
 
@@ -92,7 +93,7 @@ public class FluxRetryWhenTest {
 		Flux<Integer> when = Flux.range(1, 10)
 		                         .doOnCancel(cancelled::incrementAndGet);
 
-		justError.retryWhen(() -> other -> when)
+		justError.retryWhen((Retry) other -> when)
 		         .subscribe(new BaseSubscriber<Integer>() {
 			         @Override
 			         protected void hookOnSubscribe(Subscription subscription) {
@@ -113,7 +114,7 @@ public class FluxRetryWhenTest {
 		                           .doOnSubscribe(sub -> sourceSubscribed.set(true))
 		                           .doOnCancel(() -> sourceCancelled.set(true));
 
-		Flux<Integer> retry = source.retryWhen(() -> other -> Mono.error(new IllegalStateException("boom")));
+		Flux<Integer> retry = source.retryWhen((Retry) other -> Mono.error(new IllegalStateException("boom")));
 
 		StepVerifier.create(retry)
 		            .expectSubscription()
@@ -133,7 +134,7 @@ public class FluxRetryWhenTest {
 		                           .doOnCancel(() -> sourceCancelled.set(true));
 
 
-		Flux<Integer> retry = source.retryWhen(() -> other -> other.flatMap(l ->
+		Flux<Integer> retry = source.retryWhen((Retry) other -> other.flatMap(l ->
 				count.getAndIncrement() == 0 ? Mono.just(l) : Mono.<Long>error(new IllegalStateException("boom"))));
 
 		StepVerifier.create(retry)
@@ -154,7 +155,7 @@ public class FluxRetryWhenTest {
 		                           .doOnSubscribe(sub -> sourceSubscribed.set(true))
 		                           .doOnCancel(() -> sourceCancelled.set(true));
 
-		Flux<Integer> retry = source.retryWhen(() -> other -> Flux.empty());
+		Flux<Integer> retry = source.retryWhen((Retry) other -> Flux.empty());
 
 		StepVerifier.create(retry)
 		            .expectSubscription()
@@ -172,7 +173,7 @@ public class FluxRetryWhenTest {
 		                           .doOnSubscribe(sub -> sourceSubscribed.set(true))
 		                           .doOnCancel(() -> sourceCancelled.set(true));
 
-		Flux<Integer> retry = source.retryWhen(() -> other -> other.take(1));
+		Flux<Integer> retry = source.retryWhen((Retry) other -> other.take(1));
 
 		StepVerifier.create(retry)
 		            .expectSubscription()
@@ -188,7 +189,7 @@ public class FluxRetryWhenTest {
 	public void coldRepeater() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create();
 
-		justError.retryWhen(() -> v -> Flux.range(1, 10))
+		justError.retryWhen((Retry) other -> Flux.range(1, 10))
 		         .subscribe(ts);
 
 		ts.assertValues(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
@@ -200,7 +201,7 @@ public class FluxRetryWhenTest {
 	public void coldRepeaterBackpressured() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create(0);
 
-		rangeError.retryWhen(() -> v -> Flux.range(1, 5))
+		rangeError.retryWhen((Retry) other -> Flux.range(1, 5))
 		          .subscribe(ts);
 
 		ts.assertNoValues()
@@ -236,7 +237,7 @@ public class FluxRetryWhenTest {
 	public void coldEmpty() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create(0);
 
-		rangeError.retryWhen(() -> v -> Flux.empty())
+		rangeError.retryWhen((Retry) other -> Flux.empty())
 		          .subscribe(ts);
 
 		ts.assertNoValues()
@@ -248,7 +249,7 @@ public class FluxRetryWhenTest {
 	public void coldError() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create(0);
 
-		rangeError.retryWhen(() -> v -> Flux.error(new RuntimeException("forced failure")))
+		rangeError.retryWhen((Retry) other -> Flux.error(new RuntimeException("forced failure")))
 		          .subscribe(ts);
 
 		ts.assertNoValues()
@@ -261,7 +262,7 @@ public class FluxRetryWhenTest {
 	public void whenFactoryThrows() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create();
 
-		rangeError.retryWhen(() -> v -> {
+		rangeError.retryWhen((Retry) other -> {
 			throw new RuntimeException("forced failure");
 		})
 		          .subscribe(ts);
@@ -276,7 +277,7 @@ public class FluxRetryWhenTest {
 	public void whenFactoryReturnsNull() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create();
 
-		rangeError.retryWhen(() -> v -> null)
+		rangeError.retryWhen((Retry) other -> null)
 		          .subscribe(ts);
 
 		ts.assertNoValues()
@@ -285,26 +286,10 @@ public class FluxRetryWhenTest {
 	}
 
 	@Test
-	public void supplierThrows() {
-		assertThatIllegalStateException().isThrownBy(() ->
-				rangeError.retryWhen(() -> {
-					throw new IllegalStateException("forced failure");
-				})
-		).withMessage("forced failure");
-	}
-
-	@Test
-	public void supplierReturnsNull() {
-		assertThatNullPointerException().isThrownBy(() ->
-				rangeError.retryWhen(() -> null)
-		).withMessage("whenSourceFactory");
-	}
-
-	@Test
 	public void retryErrorsInResponse() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create();
 
-		rangeError.retryWhen(() -> v -> v.map(a -> {
+		rangeError.retryWhen((Retry) v -> v.map(a -> {
 			throw new RuntimeException("forced failure");
 		}))
 		          .subscribe(ts);
@@ -320,7 +305,7 @@ public class FluxRetryWhenTest {
 	public void retryAlways() {
 		AssertSubscriber<Integer> ts = AssertSubscriber.create(0);
 
-		rangeError.retryWhen(() -> v -> v)
+		rangeError.retryWhen((Retry) v -> v)
 		          .subscribe(ts);
 
 		ts.request(8);
@@ -414,21 +399,21 @@ public class FluxRetryWhenTest {
 						    contextPerRetry.add(sig.getContext());
 					    }
 				    })
-				    .retryWhen(() -> retrySignalFlux -> retrySignalFlux.handle((rs, sink) -> {
+				    .retryWhen((Retry) retrySignalFlux -> retrySignalFlux.handle((rs, sink) -> {
 	                    Context ctx = sink.currentContext();
 	                    int rl = ctx.getOrDefault("retriesLeft", 0);
 	                    if (rl > 0) {
 		                    sink.next(Context.of("retriesLeft", rl - 1));
 	                    }
 	                    else {
-		                    sink.error(new IllegalStateException("retries exhausted", rs.failure()));
+		                    sink.error(Exceptions.retryExhausted("retries exhausted", rs.failure()));
 	                    }
                     }))
 				    .subscriberContext(Context.of("retriesLeft", RETRY_COUNT))
 					.subscriberContext(Context.of("thirdPartyContext", "present"));
 
 		StepVerifier.create(retryWithContext)
-		            .expectErrorSatisfies(e -> assertThat(e).isInstanceOf(IllegalStateException.class)
+		            .expectErrorSatisfies(e -> assertThat(e).matches(Exceptions::isRetryExhausted, "isRetryExhausted")
 		                                                    .hasMessage("retries exhausted")
 		                                                    .hasCause(new IllegalStateException("boom")))
 		            .verify(Duration.ofSeconds(1));
