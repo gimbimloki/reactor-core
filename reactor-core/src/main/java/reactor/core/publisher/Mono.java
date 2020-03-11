@@ -3692,8 +3692,10 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * Note that if the companion {@link Publisher} created by the {@code whenFactory}
 	 * emits {@link Context} as trigger objects, the content of these Context will be added
 	 * to the operator's own {@link Context}:
-	 * <pre><code>
-	 * Function&lt;Flux&lt;Throwable>, Publisher&lt;?>> customFunction = errorCurrentAttempt -> errorCurrentAttempt.handle((lastError, sink) -> {
+	 * <blockquote>
+	 * <pre>
+	 * {@code
+	 * Function<Flux<Throwable>, Publisher<?>> customFunction = errorCurrentAttempt -> errorCurrentAttempt.handle((lastError, sink) -> {
 	 * 	    Context ctx = sink.currentContext();
 	 * 	    int rl = ctx.getOrDefault("retriesLeft", 0);
 	 * 	    if (rl > 0) {
@@ -3705,8 +3707,9 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * 	        sink.error(Exceptions.retryExhausted("retries exhausted", lastError));
 	 * 	    }
 	 * });
-	 * Mono&lt;T> retried = originalMono.retryWhen(customFunction);
-	 * </code></pre>
+	 * Mono<T> retried = originalMono.retryWhen(customFunction);
+	 * }</pre>
+	 * </blockquote>
 	 *
 	 * @param whenFactory the {@link Function} that returns the associated {@link Publisher}
 	 * companion, given a {@link Flux} that signals each onError as a {@link Throwable}.
@@ -3746,7 +3749,9 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * Note that if the companion {@link Publisher} created by the {@code whenFactory}
 	 * emits {@link Context} as trigger objects, these {@link Context} will be merged with
 	 * the previous Context:
-	 * <pre><code>
+	 * <blockquote>
+	 * <pre>
+	 * {@code
 	 * Retry customStrategy = companion -> companion.handle((retrySignal, sink) -> {
 	 * 	    Context ctx = sink.currentContext();
 	 * 	    int rl = ctx.getOrDefault("retriesLeft", 0);
@@ -3759,8 +3764,9 @@ public abstract class Mono<T> implements CorePublisher<T> {
 	 * 	        sink.error(Exceptions.retryExhausted("retries exhausted", retrySignal.failure()));
 	 * 	    }
 	 * });
-	 * Mono&lt;T> retried = originalMono.retryWhen(customStrategy);
-	 * </code></pre>
+	 * Mono<T> retried = originalMono.retryWhen(customStrategy);
+	 * }</pre>
+	 * </blockquote>
 	 *
 	 * @param retrySpec the {@link Retry} strategy that will generate the companion {@link Publisher},
 	 * given a {@link Flux} that signals each onError as a {@link reactor.util.retry.Retry.RetrySignal}.

@@ -7217,8 +7217,9 @@ public abstract class Flux<T> implements CorePublisher<T> {
 	 * Note that if the companion {@link Publisher} created by the {@code whenFactory}
 	 * emits {@link Context} as trigger objects, these {@link Context} will be merged with
 	 * the previous Context:
-	 * <pre><code>
-	 * Function&lt;Flux&lt;Throwable>, Publisher&lt;?>> customFunction = errorCurrentAttempt -> errorCurrentAttempt.handle((lastError, sink) -> {
+	 * <blockquote>
+	 * <pre>{@code
+	 * Function<Flux<Throwable>, Publisher<?>> customFunction = errorCurrentAttempt -> errorCurrentAttempt.handle((lastError, sink) -> {
 	 * 	    Context ctx = sink.currentContext();
 	 * 	    int rl = ctx.getOrDefault("retriesLeft", 0);
 	 * 	    if (rl > 0) {
@@ -7230,8 +7231,9 @@ public abstract class Flux<T> implements CorePublisher<T> {
 	 * 	        sink.error(Exceptions.retryExhausted("retries exhausted", lastError));
 	 * 	    }
 	 * });
-	 * Flux&lt;T> retried = originalFlux.retryWhen(customFunction);
-	 * </code></pre>
+	 * Flux<T> retried = originalFlux.retryWhen(customFunction);
+	 * }</pre>
+	 * </blockquote>
 	 *
 	 * @param whenFactory the {@link Function} that returns the associated {@link Publisher}
 	 * companion, given a {@link Flux} that signals each onError as a {@link Throwable}.
@@ -7272,7 +7274,8 @@ public abstract class Flux<T> implements CorePublisher<T> {
 	 * Note that if the companion {@link Publisher} created by the {@code whenFactory}
 	 * emits {@link Context} as trigger objects, these {@link Context} will be merged with
 	 * the previous Context:
-	 * <pre><code>
+	 * <blockquote><pre>
+	 * {@code
 	 * Retry customStrategy = companion -> companion.handle((retrySignal, sink) -> {
 	 * 	    Context ctx = sink.currentContext();
 	 * 	    int rl = ctx.getOrDefault("retriesLeft", 0);
@@ -7285,8 +7288,9 @@ public abstract class Flux<T> implements CorePublisher<T> {
 	 * 	        sink.error(Exceptions.retryExhausted("retries exhausted", retrySignal.failure()));
 	 * 	    }
 	 * });
-	 * Flux&lt;T> retried = originalFlux.retryWhen(customStrategy);
-	 * </code></pre>
+	 * Flux<T> retried = originalFlux.retryWhen(customStrategy);
+	 * }</pre>
+	 * </blockquote>
 	 *
 	 * @param retrySpec the {@link Retry} strategy that will generate the companion {@link Publisher},
 	 * given a {@link Flux} that signals each onError as a {@link reactor.util.retry.Retry.RetrySignal}.
